@@ -2,7 +2,6 @@
 #include <ESP8266HTTPClient.h>
 #include <WiFiClientSecure.h> 
 #include <ArduinoJson.h>
-#include <FS.h>
 #include "DHTesp.h" //https://github.com/beegee-tokyo/DHTesp
 
 DHTesp dht;
@@ -25,18 +24,7 @@ void setup()
   apiString += sensorId;
   
   Serial.begin(115200);
-  SPIFFS.begin();
-
-  File f = SPIFFS.open("/wifi.txt", "r");
-
-  while(f.available())
-  {
-        //Lets read line by line from the file
-        String line = f.readStringUntil('\n');
-        Serial.println(line);
-  }
-  f.close();
-
+  
   //setup DHT22 sensor
   dht.setup(D2, DHTesp::DHT22);
   
