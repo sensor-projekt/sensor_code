@@ -3,14 +3,15 @@
 #include <WiFiClientSecure.h> 
 #include <ArduinoJson.h>
 #include "DHTesp.h" //https://github.com/beegee-tokyo/DHTesp
-#include <WiFiManager.h>
+#include <WiFiManager.h> //https://github.com/tzapu/WiFiManager
 
 DHTesp dht;
 WiFiClient wifiClient;
 
 const char* apiString = "http://146.190.1.185/postmeasurement/";
-const char* host = "http://146.190.1.185";
-const int httpsPort = 80;
+//const char* host = "http://146.190.1.185";
+///const int httpsPort = 80;
+const char* accessPoint = "d3b76034-953e-4bcf";
 const char* sensorAuth1 = "Basic ZDNiNzYwMzQtOTUzZS00YmNmLTgwMjEtYWJhYmQ3MDc1YmZjOitIOGkjRzg0dDk=";
 const char* sensorId1 = "d3b76034-953e-4bcf-8021-ababd7075bfc";
 const char* sensorKey1 = "+H8i#G84t9";
@@ -43,12 +44,14 @@ void setup()
   // if it does not connect it starts an access point with the specified name
   // here  "AutoConnectAP"
   // and goes into a blocking loop awaiting configuration
-  wifiManager.autoConnect(sensorId1, sensorKey1);
+  wifiManager.autoConnect(accessPoint, sensorKey1);
   // or use this for auto generated name ESP + ChipID
   //wifiManager.autoConnect();
   
   // if you get here you have connected to the WiFi
   Serial.println("Connected.");
+  //shutdown access point
+  wifiManager.stopWebPortal();
 }
 
 void postJson(String sensorAuth) {
