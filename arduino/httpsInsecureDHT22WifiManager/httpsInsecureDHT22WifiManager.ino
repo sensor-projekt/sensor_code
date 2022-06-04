@@ -3,8 +3,6 @@
 #include <WiFiClientSecure.h> 
 #include <ArduinoJson.h>
 #include "DHTesp.h" //https://github.com/beegee-tokyo/DHTesp
-#include <DNSServer.h>
-#include <ESP8266WebServer.h>
 #include <WiFiManager.h>
 
 DHTesp dht;
@@ -14,9 +12,11 @@ const char* apiString = "http://146.190.1.185/postmeasurement/";
 const char* host = "http://146.190.1.185";
 const int httpsPort = 80;
 const char* sensorAuth1 = "Basic ZDNiNzYwMzQtOTUzZS00YmNmLTgwMjEtYWJhYmQ3MDc1YmZjOitIOGkjRzg0dDk=";
-const char* sensorId1 = "d3b76034-953e-4bcf-8021-ababd7075bfc";
+const char* tempSensorId = "d3b76034-953e-4bcf-8021-ababd7075bfc";
+const char* tempConnectKey = "+H8i#G84t9";
 const char* sensorAuth2 = "Basic OWIxYTYwMjMtNTczZi00ODMxLWI1MzktNWRiMzNiNmE2YmU5OmFPNyYrTDM0MnM=";
-const char* sensorId2 = "9b1a6023-573f-4831-b539-5db33b6a6be9";
+const char* humSensorId = "9b1a6023-573f-4831-b539-5db33b6a6be9";
+const char* humConnectKey = "aO7&+L342s";
 
 DynamicJsonDocument postData(256);
 DynamicJsonDocument responseData(256);
@@ -34,7 +34,7 @@ void setup()
   WiFiManager wifiManager;
   
   // Uncomment and run it once, if you want to erase all the stored information
-  //wifiManager.resetSettings();
+  wifiManager.resetSettings();
   
   // set custom ip for portal
   //wifiManager.setAPConfig(IPAddress(10,0,1,1), IPAddress(10,0,1,1), IPAddress(255,255,255,0));
@@ -112,12 +112,12 @@ void loop()
   
   if (WiFi.status() == WL_CONNECTED) 
   { 
-    postData["sensorId"] = sensorId1;
+    postData["sensorId"] = tempSensorId;
     postData["value"] = F;
 
     postJson(sensorAuth1);
     
-    postData["sensorId"] = sensorId2;
+    postData["sensorId"] = humSensorId;
     postData["value"] = humidity;
 
     postJson(sensorAuth2);
