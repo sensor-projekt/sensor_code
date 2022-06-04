@@ -61,13 +61,6 @@ void postJson(String sensorAuth) {
   http.addHeader("Content-Type", "application/json");
   http.addHeader("Authorization", sensorAuth.c_str());
   int httpCode = http.POST(json);
-  
-  //http.begin(client, apiString);
-  //http.setAuthorization("user", "pass"); // Will set _base64Authorization to base64encode(user+ ':' + pass)
-  //http.setAuthorization("base64encoded_String");
-  //http.setAuthorization(sensorId.c_str(), connectKey.c_str());
-  
-  //http.addHeader("Content-Type", "application/json");
 
   Serial.print("httpCode: ");
   Serial.println(httpCode);

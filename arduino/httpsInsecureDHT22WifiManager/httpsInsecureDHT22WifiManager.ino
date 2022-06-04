@@ -1,76 +1,97 @@
-#include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
+#include <WiFiClient.h>
 #include <WiFiClientSecure.h> 
 #include <ArduinoJson.h>
 #include "DHTesp.h" //https://github.com/beegee-tokyo/DHTesp
+#include <DNSServer.h>
+#include <ESP8266WebServer.h>
+#include <WiFiManager.h>
 
 DHTesp dht;
+WiFiClient wifiClient;
 
-const char* ssid = "";
-const char* password = "";
-const char* hostURL = "https://thesensorproject.org/api/public/measurement/";
-const char* host = "https://thesensorproject.org";
-const int httpsPort = 443;
-const char* sensorId = "";
-const char* connectKey = "";
-String apiString = "";
- 
+const char* apiString = "http://146.190.1.185/postmeasurement/";
+const char* host = "http://146.190.1.185";
+const int httpsPort = 80;
+const char* sensorAuth1 = "Basic ZDNiNzYwMzQtOTUzZS00YmNmLTgwMjEtYWJhYmQ3MDc1YmZjOitIOGkjRzg0dDk=";
+const char* tempSensorId = "d3b76034-953e-4bcf-8021-ababd7075bfc";
+const char* tempConnectKey = "+H8i#G84t9";
+const char* sensorAuth2 = "Basic OWIxYTYwMjMtNTczZi00ODMxLWI1MzktNWRiMzNiNmE2YmU5OmFPNyYrTDM0MnM=";
+const char* humSensorId = "9b1a6023-573f-4831-b539-5db33b6a6be9";
+const char* humConnectKey = "aO7&+L342s";
+
 DynamicJsonDocument postData(256);
 DynamicJsonDocument responseData(256);
 
 void setup() 
 {
-  apiString += host;
-  apiString += sensorId;
   
   Serial.begin(115200);
   
   //setup DHT22 sensor
   dht.setup(D2, DHTesp::DHT22);
   
-  WiFi.begin(ssid, password);
-
-  while (WiFi.status() != WL_CONNECTED) 
-  {
-    delay(1000);
-    Serial.println("Connecting...");
-  }
+  // WiFiManager
+  // Local intialization. Once its business is done, there is no need to keep it around
+  WiFiManager wifiManager;
   
-  // Print the IP address
-  Serial.print("IP address: ");
-  Serial.print(WiFi.localIP());
-  Serial.println();
+  // Uncomment and run it once, if you want to erase all the stored information
+  //wifiManager.resetSettings();
+  
+  // set custom ip for portal
+  //wifiManager.setAPConfig(IPAddress(10,0,1,1), IPAddress(10,0,1,1), IPAddress(255,255,255,0));
+
+  // fetches ssid and pass from eeprom and tries to connect
+  // if it does not connect it starts an access point with the specified name
+  // here  "AutoConnectAP"
+  // and goes into a blocking loop awaiting configuration
+  wifiManager.autoConnect("AutoConnectAP");
+  // or use this for auto generated name ESP + ChipID
+  //wifiManager.autoConnect();
+  
+  // if you get here you have connected to the WiFi
+  Serial.println("Connected.");
 }
 
-void postJson() {
+void postJson(String sensorAuth) {
   String json; 
   serializeJson(postData, json);
 
-  WiFiClientSecure client;
-  client.setInsecure(); //the magic line, use with caution
-  client.connect(host, httpsPort);
-  
-  HTTPClient http; //Object of class HTTPClient
-  
-  http.begin(client, apiString);
+  Serial.print("json: ");
+  Serial.println(json);
 
+  //WiFiClientSecure client;
+  //client.setInsecure(); //the magic line, use with caution
+  //client.connect(host, httpsPort);
+
+  HTTPClient http;
+  http.begin(wifiClient, apiString);
   http.addHeader("Content-Type", "application/json");
-
+  http.addHeader("Authorization", sensorAuth.c_str());
   int httpCode = http.POST(json);
 
+  Serial.print("httpCode: ");
+  Serial.println(httpCode);
+  
   if (httpCode > 0) {
-    if (httpCode != 200) {
+    if (httpCode != 200 && httpCode != 201) {
       String response = http.getString();
       DeserializationError error = deserializeJson(responseData, response);
       if (error) {
         Serial.print(F("deserializeJson() failed: "));
         Serial.println(error.c_str());
       }
-      const char* message = responseData["message"];
       Serial.print("Something went wrong: ");
-      Serial.println(message);
+      Serial.println(response);
       Serial.println("");
     }
+    else {
+      String response = http.getString();
+      Serial.print("response: ");
+      Serial.println(response);
+      Serial.println("");
+    }
+
   }
 
   http.end(); //Close connection
@@ -93,20 +114,18 @@ void loop()
   
   if (WiFi.status() == WL_CONNECTED) 
   { 
-    postData["type"] = "humidity";
-    postData["value"] = humidity;
-    postData["connectKey"] = connectKey;
-
-    postJson();
-    
-    //Begin second post
-    postData["type"] = "temperature";
+    postData["sensorId"] = tempSensorId;
     postData["value"] = F;
-    postData["connectKey"] = connectKey;
 
-    postJson();
+    postJson(sensorAuth1);
+    
+    postData["sensorId"] = humSensorId;
+    postData["value"] = humidity;
+
+    postJson(sensorAuth2);
+
   }
 
-  //delay 10 minutes
-  delay(1000*30);
+  //delay 5 minutes
+  delay(1000*5*60);
 }
