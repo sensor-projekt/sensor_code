@@ -12,11 +12,11 @@ const char* apiString = "http://146.190.1.185/postmeasurement/";
 const char* host = "http://146.190.1.185";
 const int httpsPort = 80;
 const char* sensorAuth1 = "Basic ZDNiNzYwMzQtOTUzZS00YmNmLTgwMjEtYWJhYmQ3MDc1YmZjOitIOGkjRzg0dDk=";
-const char* tempSensorId = "d3b76034-953e-4bcf-8021-ababd7075bfc";
-const char* tempConnectKey = "+H8i#G84t9";
+const char* sensorId1 = "d3b76034-953e-4bcf-8021-ababd7075bfc";
+const char* sensorKey1 = "+H8i#G84t9";
 const char* sensorAuth2 = "Basic OWIxYTYwMjMtNTczZi00ODMxLWI1MzktNWRiMzNiNmE2YmU5OmFPNyYrTDM0MnM=";
-const char* humSensorId = "9b1a6023-573f-4831-b539-5db33b6a6be9";
-const char* humConnectKey = "aO7&+L342s";
+const char* sensorId2 = "9b1a6023-573f-4831-b539-5db33b6a6be9";
+const char* sensorKey2 = "aO7&+L342s";
 
 DynamicJsonDocument postData(256);
 DynamicJsonDocument responseData(256);
@@ -43,7 +43,7 @@ void setup()
   // if it does not connect it starts an access point with the specified name
   // here  "AutoConnectAP"
   // and goes into a blocking loop awaiting configuration
-  wifiManager.autoConnect("AutoConnectAP");
+  wifiManager.autoConnect("SensorProjectAP", sensorKey1);
   // or use this for auto generated name ESP + ChipID
   //wifiManager.autoConnect();
   
@@ -112,12 +112,12 @@ void loop()
   
   if (WiFi.status() == WL_CONNECTED) 
   { 
-    postData["sensorId"] = tempSensorId;
+    postData["sensorId"] = sensorId1;
     postData["value"] = F;
 
     postJson(sensorAuth1);
     
-    postData["sensorId"] = humSensorId;
+    postData["sensorId"] = sensorId2;
     postData["value"] = humidity;
 
     postJson(sensorAuth2);
