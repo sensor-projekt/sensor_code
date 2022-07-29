@@ -1,31 +1,27 @@
-#include <ESP8266HTTPClient.h>
-#include <WiFiClient.h>
 #include <WiFiClientSecure.h> 
 #include <ArduinoJson.h>
 #include "DHTesp.h" //https://github.com/beegee-tokyo/DHTesp
 #include <WiFiManager.h> //https://github.com/tzapu/WiFiManager
 
 DHTesp dht;
-WiFiClient wifiClient;
 
-const char* apiString = "http://146.190.1.185/postmeasurement/";
-//const char* host = "http://146.190.1.185";
-///const int httpsPort = 80;
-const char* accessPoint = "d3b76034-953e-4bcf";
-const char* sensorAuth1 = "Basic ZDNiNzYwMzQtOTUzZS00YmNmLTgwMjEtYWJhYmQ3MDc1YmZjOitIOGkjRzg0dDk=";
-const char* sensorId1 = "d3b76034-953e-4bcf-8021-ababd7075bfc";
-const char* sensorKey1 = "+H8i#G84t9";
-const char* sensorAuth2 = "Basic OWIxYTYwMjMtNTczZi00ODMxLWI1MzktNWRiMzNiNmE2YmU5OmFPNyYrTDM0MnM=";
-const char* sensorId2 = "9b1a6023-573f-4831-b539-5db33b6a6be9";
-const char* sensorKey2 = "aO7&+L342s";
-
+const char* apiString = "https://sensorproject.xyz/postmeasurement/";
+const char* sensorAuth1 = "Authorization: Basic ZDZmYjUwYTAtODNhOC00NjRhLTljZmQtM2JjZTkyY2Y4ZDJmOlF4JDgzLDYyV3o=";
+const char* sensorId1 = "d6fb50a0-83a8-464a-9cfd-3bce92cf8d2f";
+const char* sensorKey = "Qx$83,62Wz";
+const char* sensorAuth2 = "Authorization:Basic MDgwZmI4ODktMDU3YS00ZDY5LTlkNWUtZWIxNTQ1Y2Q4MjBiOlF4JDgzLDYyV3o=";
+const char* sensorId2 = "080fb889-057a-4d69-9d5e-eb1545cd820b";
+//const char* fingerprint = "CC:24:49:F2:77:70:71:94:C7:51:56:EC:44:FB:0C:67:AC:67:F7:39";
 DynamicJsonDocument postData(256);
 DynamicJsonDocument responseData(256);
+const char* host = "sensorproject.xyz";
+const uint16_t port = 443;
 
 void setup() 
 {
-  
   Serial.begin(115200);
+  Serial.println();
+  Serial.println();
   
   //setup DHT22 sensor
   dht.setup(D2, DHTesp::DHT22);
@@ -35,16 +31,9 @@ void setup()
   WiFiManager wifiManager;
   
   // Uncomment and run it once, if you want to erase all the stored information
-  wifiManager.resetSettings();
-  
-  // set custom ip for portal
-  //wifiManager.setAPConfig(IPAddress(10,0,1,1), IPAddress(10,0,1,1), IPAddress(255,255,255,0));
-
-  // fetches ssid and pass from eeprom and tries to connect
-  // if it does not connect it starts an access point with the specified name
-  // here  "AutoConnectAP"
+  wifiManager.resetSettings();DynamicJsonDocument bodyData(256);
   // and goes into a blocking loop awaiting configuration
-  wifiManager.autoConnect(accessPoint, sensorKey1);
+  wifiManager.autoConnect(sensorKey);
   // or use this for auto generated name ESP + ChipID
   //wifiManager.autoConnect();
   
@@ -54,48 +43,57 @@ void setup()
   wifiManager.stopWebPortal();
 }
 
-void postJson(String sensorAuth) {
-  String json; 
-  serializeJson(postData, json);
+void postJson(bool sensorAuth) {
+  String bodyString; 
+  serializeJson(postData, bodyString);
 
-  Serial.print("json: ");
-  Serial.println(json);
-
-  //WiFiClientSecure client;
-  //client.setInsecure(); //the magic line, use with caution
-  //client.connect(host, httpsPort);
-
-  HTTPClient http;
-  http.begin(wifiClient, apiString);
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("Authorization", sensorAuth.c_str());
-  int httpCode = http.POST(json);
-
-  Serial.print("httpCode: ");
-  Serial.println(httpCode);
-  
-  if (httpCode > 0) {
-    if (httpCode != 200 && httpCode != 201) {
-      String response = http.getString();
-      DeserializationError error = deserializeJson(responseData, response);
-      if (error) {
-        Serial.print(F("deserializeJson() failed: "));
-        Serial.println(error.c_str());
-      }
-      Serial.print("Something went wrong: ");
-      Serial.println(response);
-      Serial.println("");
-    }
-    else {
-      String response = http.getString();
-      Serial.print("response: ");
-      Serial.println(response);
-      Serial.println("");
-    }
-
+  BearSSL::WiFiClientSecure client;
+  client.setInsecure();
+  //client.setFingerprint(fingerprint);
+  Serial.printf("\nTrying: %s:443...", host);
+  client.connect(host, port);
+  if (!client.connected()) {
+    Serial.printf("*** Can't connect. ***\n-------\n");
+    return;
   }
+  Serial.printf("Connected!\n-------\n");
+  client.print("POST ");
+  client.print("/postmeasurement/");
+  client.print(" HTTP/1.0\r\nHost: ");
+  client.print(host);
+  client.print("\r\n");
 
-  http.end(); //Close connection
+  sensorAuth ?
+  client.print(sensorAuth1)
+  : client.print(sensorAuth2);  
+  
+  client.print("\r\n");
+  client.print("Content-Type: application/json");
+  client.print("\r\n");
+  client.print("Content-Length: "); 
+  client.print(strlen(bodyString.c_str()));
+  client.print("\r\n");
+  client.print("\r\n");
+  client.print(bodyString);
+  uint32_t to = millis() + 5000;
+  if (client.connected()) {
+    do {
+      char tmp[32];
+      memset(tmp, 0, 32);
+      int rlen = client.read((uint8_t *)tmp, sizeof(tmp) - 1);
+      yield();
+      if (rlen < 0) { break; }
+      // Only print out first line up to \r, then abort connection
+      char *nl = strchr(tmp, '\r');
+      if (nl) {
+        *nl = 0;
+        Serial.print(tmp);
+        break;
+      }
+      Serial.print(tmp);
+    } while (millis() < to);
+  }
+  client.stop();
 }
 
 void loop() 
@@ -118,12 +116,12 @@ void loop()
     postData["sensorId"] = sensorId1;
     postData["value"] = F;
 
-    postJson(sensorAuth1);
+    postJson(true);
     
     postData["sensorId"] = sensorId2;
     postData["value"] = humidity;
 
-    postJson(sensorAuth2);
+    postJson(false);
 
   }
 
